@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Todo App</title>
+</head>
+<body>
+
+<h2>Todo App</h2>
+
+<input type="text" id="taskInput" placeholder="Enter task">
+<button onclick="addTask()">Add</button>
+
+<ul id="list"></ul>
+
+<script>
+function addTask() {
+  let input = document.getElementById("taskInput");
+  let li = document.createElement("li");
+  li.textContent = input.value;
+  document.getElementById("list").appendChild(li);
+  input.value = "";
+}
+</script>
+
+</body>
+</html>
