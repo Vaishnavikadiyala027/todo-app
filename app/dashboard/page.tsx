@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 
+// ✅ Keep charts client-side only
 const PieChart = dynamic(() => import("recharts").then(m => m.PieChart), { ssr: false });
 const Pie = dynamic(() => import("recharts").then(m => m.Pie), { ssr: false });
 const Cell = dynamic(() => import("recharts").then(m => m.Cell), { ssr: false });
@@ -33,24 +34,27 @@ export default function Dashboard() {
 
   const fetchTasks = async (currentUser: any) => {
     if (!currentUser) return;
-    const snapshot = await getDocs(collection(db, "tasks"));
-    const data: any[] = [];
-    snapshot.forEach((doc) => {
-      if (doc.data().email === currentUser.email) data.push({ id: doc.id, ...doc.data() });
-    });
-    setTasks(data);
+    try {
+      const snapshot = await getDocs(collection(db, "tasks"));
+      const data: any[] = [];
+      snapshot.forEach((doc) => {
+        if (doc.data().email === currentUser.email) data.push({ id: doc.id, ...doc.data() });
+      });
+      setTasks(data);
+    } catch (err) { console.error(err); }
   };
 
   useEffect(() => { if (user) fetchTasks(user); }, [user]);
 
   if (!mounted) return null;
 
-  const completedCount = tasks.filter(t => t.completed).length;
-  const pendingCount = tasks.length - completedCount;
+  const completed = tasks.filter(t => t.completed).length;
+  const pending = tasks.length - completed;
 
+  // ✅ FORCED COLOR DATA
   const pieData = [
-    { name: "Completed", value: completedCount, color: "#22c55e" },
-    { name: "Pending", value: pendingCount, color: "#ef4444" }
+    { name: "Completed", value: completed, color: "#22c55e" }, // Green
+    { name: "Pending", value: pending, color: "#ef4444" }      // Red
   ];
 
   const weeklyData = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, idx) => ({
@@ -74,10 +78,10 @@ export default function Dashboard() {
           <p>Total Tasks</p><h2 className="text-2xl font-bold">{tasks.length}</h2>
         </div>
         <div className="p-6 rounded-xl bg-white/40 backdrop-blur shadow border border-white/20">
-          <p className="text-green-600 font-semibold">Completed</p><h2 className="text-2xl font-bold">{completedCount}</h2>
+          <p className="text-green-600 font-semibold">Completed</p><h2 className="text-2xl font-bold">{completed}</h2>
         </div>
         <div className="p-6 rounded-xl bg-white/40 backdrop-blur shadow border border-white/20">
-          <p className="text-red-600 font-semibold">Pending</p><h2 className="text-2xl font-bold">{pendingCount}</h2>
+          <p className="text-red-600 font-semibold">Pending</p><h2 className="text-2xl font-bold">{pending}</h2>
         </div>
       </div>
 
@@ -88,14 +92,17 @@ export default function Dashboard() {
             <ResponsiveContainer>
               <PieChart>
                 <Pie
-                  key={`pie-${completedCount}-${pendingCount}`}
+                  key={`pie-chart-${completed}-${pending}`} // ✅ FORCES RE-RENDER
                   data={pieData}
                   dataKey="value"
                   cx="50%" cy="50%"
                   outerRadius={80}
+                  isAnimationActive={false} // ✅ DISABLES ANIMATION TO STOP THE GRAY LOOK
                   label={({ name, value }) => `${name}: ${value}`}
                 >
-                  {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                  ))}
                 </Pie>
                 <Tooltip />
               </PieChart>
