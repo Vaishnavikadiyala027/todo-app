@@ -26,9 +26,8 @@ export default function Dashboard() {
   const [darkMode, setDarkMode] = useState(false);
   const [tasks, setTasks] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
-  const [mounted, setMounted] = useState(false); // ✅ Logic Fix: Prevents Vercel error
+  const [mounted, setMounted] = useState(false);
 
-  // ✅ Logic Fix: Safe LocalStorage Access
   useEffect(() => {
     setMounted(true);
     if (typeof window !== "undefined") {
@@ -69,7 +68,6 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [user]);
 
-  // ✅ Logic Fix: Don't render until browser is ready
   if (!mounted) return null;
 
   const toggleTheme = () => {
@@ -84,17 +82,20 @@ export default function Dashboard() {
   const completed = tasks.filter((t) => t.completed).length;
   const pending = total - completed;
 
+  // ✅ FIXED: Explicit color data
   const pieData = [
-    { name: "Completed", value: completed },
-    { name: "Pending", value: pending },
+    { name: "Completed", value: completed, color: "#22c55e" },
+    { name: "Pending", value: pending, color: "#f97316" },
   ];
 
+  // ✅ FIXED: Weekly Logic
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const weeklyData = days.map((day, index) => {
     const count = tasks.filter((t) => {
-      if (!t.date || !t.completed) return false;
-      const d = new Date(t.date);
-      return d.getDay() === index;
+      if (!t.date) return false;
+      const taskDate = new Date(t.date);
+      // Check if task falls on this day of the week
+      return taskDate.getDay() === index;
     }).length;
     return { day, tasks: count };
   });
@@ -122,47 +123,59 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-3 gap-6 mb-10">
-        <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow">
+        <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow border border-white/20">
           <p>Total Tasks</p>
           <h2 className="text-2xl font-bold">{total}</h2>
         </div>
-        <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow">
+        <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow border border-white/20">
           <p className="text-green-500">Completed</p>
           <h2 className="text-2xl font-bold">{completed}</h2>
         </div>
-        <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow">
+        <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow border border-white/20">
           <p className="text-orange-500">Pending</p>
           <h2 className="text-2xl font-bold">{pending}</h2>
         </div>
       </div>
 
       {total !== 0 ? (
-        <div className="grid grid-cols-2 gap-10">
-          <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow">
-            <h3 className="mb-4">Status</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie data={pieData} dataKey="value" outerRadius={80} label>
-                  {pieData.map((_, i) => (
-                    <Cell key={i} fill={i === 0 ? "#22c55e" : "#f97316"} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+          <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow border border-white/20">
+            <h3 className="mb-4 font-semibold">Status</h3>
+            <div style={{ width: '100%', height: 300 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie 
+                    data={pieData} 
+                    dataKey="value" 
+                    nameKey="name" 
+                    cx="50%" 
+                    cy="50%" 
+                    outerRadius={80} 
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
-          <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow">
-            <h3 className="mb-4">Weekly</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={weeklyData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="day" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="tasks" fill="#3b82f6" />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow border border-white/20">
+            <h3 className="mb-4 font-semibold">Weekly</h3>
+            <div style={{ width: '100%', height: 300 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={weeklyData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={darkMode ? "#444" : "#ccc"} />
+                  <XAxis dataKey="day" stroke={darkMode ? "#fff" : "#000"} />
+                  <YAxis stroke={darkMode ? "#fff" : "#000"} />
+                  <Tooltip cursor={{fill: 'transparent'}} />
+                  <Bar dataKey="tasks" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
       ) : (
