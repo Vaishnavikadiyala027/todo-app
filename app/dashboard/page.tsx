@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
@@ -46,25 +45,24 @@ export default function Dashboard() {
 
   if (!mounted) return null;
 
-  const completed = tasks.filter(t => t.completed).length;
-  const pending = tasks.length - completed;
+  const completedCount = tasks.filter(t => t.completed).length;
+  const pendingCount = tasks.length - completedCount;
 
   const pieData = [
-    { name: "Completed", value: completed, color: "#22c55e" },
-    { name: "Pending", value: pending, color: "#ef4444" }
+    { name: "Completed", value: completedCount, color: "#22c55e" },
+    { name: "Pending", value: pendingCount, color: "#ef4444" }
   ];
 
-  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const weeklyData = days.map((day, idx) => ({
+  const weeklyData = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, idx) => ({
     day,
     tasks: tasks.filter(t => t.date && new Date(t.date).getDay() === idx).length
   }));
 
   return (
-    <div className="min-h-screen p-10 bg-gradient-to-br from-purple-100 via-white to-orange-100">
+    <div className="min-h-screen p-10 bg-gradient-to-br from-purple-100 via-white to-orange-100 text-black">
       <div className="flex justify-between items-center mb-10">
         <h1 className="text-2xl font-bold text-orange-500">📊 Dashboard</h1>
-        <div className="flex gap-4">
+        <div className="flex gap-4 items-center">
           <button onClick={() => router.push("/todo")}>Home</button>
           <button className="underline font-bold">Dashboard</button>
           <button onClick={() => router.push("/trash")}>Trash</button>
@@ -73,16 +71,13 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         <div className="p-6 rounded-xl bg-white/40 backdrop-blur shadow border border-white/20">
-          <p>Total Tasks</p>
-          <h2 className="text-2xl font-bold">{tasks.length}</h2>
+          <p>Total Tasks</p><h2 className="text-2xl font-bold">{tasks.length}</h2>
         </div>
         <div className="p-6 rounded-xl bg-white/40 backdrop-blur shadow border border-white/20">
-          <p className="text-green-600 font-semibold">Completed</p>
-          <h2 className="text-2xl font-bold">{completed}</h2>
+          <p className="text-green-600 font-semibold">Completed</p><h2 className="text-2xl font-bold">{completedCount}</h2>
         </div>
         <div className="p-6 rounded-xl bg-white/40 backdrop-blur shadow border border-white/20">
-          <p className="text-red-600 font-semibold">Pending</p>
-          <h2 className="text-2xl font-bold">{pending}</h2>
+          <p className="text-red-600 font-semibold">Pending</p><h2 className="text-2xl font-bold">{pendingCount}</h2>
         </div>
       </div>
 
@@ -93,16 +88,14 @@ export default function Dashboard() {
             <ResponsiveContainer>
               <PieChart>
                 <Pie
-                  key={`pie-${completed}-${pending}`} // ✅ RE-RENDERS TO FIX COLORS
+                  key={`pie-${completedCount}-${pendingCount}`}
                   data={pieData}
                   dataKey="value"
                   cx="50%" cy="50%"
                   outerRadius={80}
                   label={({ name, value }) => `${name}: ${value}`}
                 >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
+                  {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                 </Pie>
                 <Tooltip />
               </PieChart>
@@ -116,9 +109,7 @@ export default function Dashboard() {
             <ResponsiveContainer>
               <BarChart data={weeklyData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="day" />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
+                <XAxis dataKey="day" /><YAxis allowDecimals={false} /><Tooltip />
                 <Bar dataKey="tasks" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
