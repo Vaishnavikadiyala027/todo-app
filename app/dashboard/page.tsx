@@ -56,11 +56,10 @@ export default function Dashboard() {
 
   const COLORS = ["#22c55e", "#ef4444"]; // green, red
 
-  const pieData = [
-    { name: "Completed", value: completed },
-    { name: "Pending", value: pending }
-  ];
-
+ const pieData = [
+  { name: "Completed", value: completed, fill: "#22c55e" }, // green
+  { name: "Pending", value: pending, fill: "#ef4444" }     // red
+];
   const weeklyData = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((day, idx) => ({
     day,
     tasks: tasks.filter(t => t.date && new Date(t.date).getDay() === idx).length
@@ -109,20 +108,9 @@ export default function Dashboard() {
   cy="50%"
   outerRadius={90}
   label
-  isAnimationActive={false}   // 🔥 ADD THIS LINE
+  isAnimationActive={false}
 >
-  {pieData.map((entry, index) => (
-    <Cell key={`cell-${index}`} fill={COLORS[index]} />
-  ))}
-</Pie>
-  {pieData.map((entry, index) => (
-    <Cell key={`cell-${index}`} fill={COLORS[index]} />
-  ))}
-</Pie>
-                  {pieData.map((_, index) => (
-                    <Cell key={index} fill={COLORS[index]} />
-                  ))}
-                </Pie>
+</pie>
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
