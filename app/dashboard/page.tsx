@@ -105,12 +105,16 @@ export default function Dashboard() {
                 <Pie
   data={pieData}
   dataKey="value"
-  nameKey="name"   // ✅ ADD THIS LINE
   cx="50%"
   cy="50%"
   outerRadius={90}
   label
+  isAnimationActive={false}   // 🔥 ADD THIS LINE
 >
+  {pieData.map((entry, index) => (
+    <Cell key={`cell-${index}`} fill={COLORS[index]} />
+  ))}
+</Pie>
   {pieData.map((entry, index) => (
     <Cell key={`cell-${index}`} fill={COLORS[index]} />
   ))}
