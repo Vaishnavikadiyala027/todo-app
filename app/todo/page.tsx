@@ -27,27 +27,26 @@ export default function Todo() {
   const [dateTime, setDateTime] = useState("");
   const [priority, setPriority] = useState("medium");
   const [user, setUser] = useState<any>(null);
-  const [mounted, setMounted] = useState(false); // ✅ Added for hydration safety
+  const [mounted, setMounted] = useState(false); // ✅ Added for Vercel build safety
 
-  // ✅ SAFE INITIALIZATION
+  // ✅ FIXED LOCALSTORAGE
   useEffect(() => {
-    setMounted(true); // Signal that we are now in the browser
+    setMounted(true);
+    if (typeof window === "undefined") return;
 
-    if (typeof window !== "undefined") {
-      try {
-        const savedUser = localStorage.getItem("user");
-        if (!savedUser) {
-          router.push("/");
-          return;
-        }
-        setUser(JSON.parse(savedUser));
+    try {
+      const savedUser = localStorage.getItem("user");
 
-        const savedTheme = localStorage.getItem("theme");
-        if (savedTheme === "dark") setDarkMode(true);
-      } catch (err) {
-        console.error("Auth error:", err);
+      if (!savedUser) {
+        router.push("/");
+        return;
       }
-    }
+
+      setUser(JSON.parse(savedUser));
+
+      const savedTheme = localStorage.getItem("theme");
+      if (savedTheme === "dark") setDarkMode(true);
+    } catch {}
   }, [router]);
 
   const getName = () => {
@@ -56,7 +55,6 @@ export default function Todo() {
     return name.charAt(0).toUpperCase() + name.slice(1);
   };
 
-  // ✅ FETCH TASKS
   useEffect(() => {
     if (!user?.email) return;
 
@@ -118,11 +116,17 @@ export default function Todo() {
   const deleteTask = async (id: string, t: any) => {
     try {
       const snapshot = await getDocs(collection(db, "trash"));
+
       let exists = false;
 
       snapshot.forEach((docSnap) => {
         const d = docSnap.data();
-        if (d.text === t.text && d.email === t.email && d.date === t.date) {
+
+        if (
+          d.text === t.text &&
+          d.email === t.email &&
+          d.date === t.date
+        ) {
           exists = true;
         }
       });
@@ -144,9 +148,11 @@ export default function Todo() {
     }
   };
 
+  // ✅ FIXED THEME STORAGE
   const toggleTheme = () => {
     const newMode = !darkMode;
     setDarkMode(newMode);
+
     if (typeof window !== "undefined") {
       localStorage.setItem("theme", newMode ? "dark" : "light");
     }
@@ -159,19 +165,21 @@ export default function Todo() {
     router.push("/");
   };
 
-  // ✅ PREVENT RENDERING UNTIL BROWSER IS READY
+  // ✅ PREVENT RENDERING UNTIL MOUNTED
   if (!mounted) return null;
 
   const completed = tasks.filter((t) => t.completed).length;
+  const pending = tasks.length - completed;
+
   const filteredTasks = tasks.filter((t) =>
     t.text?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <div
-      className={`min-h-screen p-10 transition-colors ${
+      className={`min-h-screen p-10 ${
         darkMode
-          ? "bg-slate-900 text-white"
+          ? "bg-gradient-to-br from-[#0b1220] via-[#0f172a] to-[#1e293b] text-white"
           : "bg-gradient-to-br from-purple-100 via-white to-orange-100 text-black"
       }`}
     >
@@ -181,32 +189,39 @@ export default function Todo() {
         </h1>
 
         <div className="flex gap-6 items-center">
-          <button onClick={() => router.push("/todo")} className="font-bold underline decoration-orange-500">Home</button>
-          <button onClick={() => router.push("/dashboard")}>Dashboard</button>
+          <button onClick={() => router.push("/todo")}>Home</button>
+          <button onClick={() => router.push("/dashboard")}>
+            Dashboard
+          </button>
           <button onClick={() => router.push("/trash")}>Trash</button>
 
-          <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-gray-200/20">
+          <button onClick={toggleTheme}>
             {darkMode ? <Sun size={18} /> : <Moon size={18} />}
           </button>
 
-          <span onClick={handleLogout} className="text-red-500 cursor-pointer font-medium hover:underline">
+          <span
+            onClick={handleLogout}
+            className="text-red-500 cursor-pointer"
+          >
             Logout
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className={`p-6 rounded-xl shadow border ${darkMode ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200'}`}>
-          <p className="opacity-70">Total</p>
+      <div className="grid grid-cols-3 gap-6 mb-8">
+        <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow">
+          <p>Total</p>
           <h2 className="text-2xl font-bold">{tasks.length}</h2>
         </div>
-        <div className={`p-6 rounded-xl shadow border ${darkMode ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200'}`}>
-          <p className="text-green-500">Done</p>
+
+        <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow">
+          <p className="text-green-400">Done</p>
           <h2 className="text-2xl font-bold">{completed}</h2>
         </div>
-        <div className={`p-6 rounded-xl shadow border ${darkMode ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200'}`}>
-          <p className="text-orange-500">Pending</p>
-          <h2 className="text-2xl font-bold">{tasks.length - completed}</h2>
+
+        <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow">
+          <p className="text-orange-400">Pending</p>
+          <h2 className="text-2xl font-bold">{pending}</h2>
         </div>
       </div>
 
@@ -215,91 +230,117 @@ export default function Todo() {
         placeholder="🔍 Search tasks..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className={`w-full p-3 rounded-lg mb-6 outline-none shadow-sm ${
-          darkMode ? "bg-white/10 text-white border border-white/20" : "bg-white text-black border"
+        className={`w-full p-3 rounded-lg mb-6 outline-none ${
+          darkMode
+            ? "bg-white/10 text-white border border-white/20"
+            : "bg-white text-black border"
         }`}
       />
 
-      <div className="mb-6">
-        <div className="flex justify-between text-sm mb-1 opacity-70">
-          <span>Progress</span>
-          <span>{tasks.length === 0 ? "0%" : Math.round((completed / tasks.length) * 100) + "%"}</span>
-        </div>
-        <div className="w-full h-2 bg-gray-300/30 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-green-500 transition-all duration-500"
-            style={{ width: tasks.length === 0 ? "0%" : `${(completed / tasks.length) * 100}%` }}
-          />
-        </div>
+      <p className="mb-2">
+        Progress:{" "}
+        {tasks.length === 0
+          ? "0%"
+          : Math.round((completed / tasks.length) * 100) + "%"}
+      </p>
+
+      <div className="w-full h-2 bg-gray-300 rounded mb-6">
+        <div
+          className="h-2 bg-green-500 rounded"
+          style={{
+            width:
+              tasks.length === 0
+                ? "0%"
+                : `${(completed / tasks.length) * 100}%`,
+          }}
+        />
       </div>
 
-      <div className="flex flex-wrap gap-3 mb-8 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 shadow-inner">
+      <div className="flex gap-3 mb-8">
         <input
           value={task}
           onChange={(e) => setTask(e.target.value)}
-          placeholder="What needs to be done?"
-          className={`flex-1 min-w-[200px] p-3 rounded-lg border outline-none ${darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-300"}`}
+          placeholder="Enter task..."
+          className={`flex-1 p-3 rounded-lg ${
+            darkMode
+              ? "bg-white/10 text-white border border-white/20"
+              : "bg-white text-black border"
+          }`}
         />
+
         <input
           type="datetime-local"
           value={dateTime}
           onChange={(e) => setDateTime(e.target.value)}
-          className={`p-3 rounded-lg border text-sm ${darkMode ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-300"}`}
+          className="p-3 rounded-lg text-black"
         />
+
         <select
           value={priority}
           onChange={(e) => setPriority(e.target.value)}
-          className={`p-3 rounded-lg border text-sm ${darkMode ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-300"}`}
+          className="p-3 rounded-lg text-black"
         >
           <option value="low">Low</option>
           <option value="medium">Medium</option>
           <option value="high">High</option>
         </select>
-        <button onClick={addTask} className="bg-orange-500 hover:bg-orange-600 text-white px-8 rounded-lg font-bold transition shadow-lg">
+
+        <button
+          onClick={addTask}
+          className="bg-orange-500 text-white px-6 rounded-lg"
+        >
           + Add
         </button>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         {filteredTasks.length === 0 ? (
-          <p className="text-gray-400 text-center py-10 italic">No tasks found</p>
+          <p className="text-gray-400">No tasks</p>
         ) : (
           filteredTasks.map((t) => (
             <div
               key={t.id}
-              className={`p-4 rounded-xl shadow-sm border flex justify-between items-center transition-all hover:scale-[1.01] ${
-                darkMode ? "bg-white/5 border-white/10" : "bg-white border-gray-100"
-              }`}
+              className="p-4 rounded-xl bg-white/10 backdrop-blur shadow flex justify-between items-center"
             >
-              <div className="flex-1">
-                <p className={`font-medium ${t.completed ? "line-through opacity-40" : ""}`}>
+              <div>
+                <p
+                  className={`${
+                    t.completed ? "line-through text-gray-400" : ""
+                  }`}
+                >
                   {t.text}
                 </p>
-                <div className="flex gap-4 mt-1">
-                  {t.date && (
-                    <span className="text-[10px] opacity-60">
-                      ⏰ {new Date(t.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-                    </span>
-                  )}
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                    t.priority === "high" ? "text-red-500" : t.priority === "medium" ? "text-orange-400" : "text-green-500"
-                  }`}>
-                    {t.priority}
-                  </span>
-                </div>
+
+                {t.date && (
+                  <p className="text-xs text-gray-400">
+                    ⏰ {new Date(t.date).toLocaleString()}
+                  </p>
+                )}
+
+                <p
+                  className={`text-xs font-semibold ${
+                    t.priority === "high"
+                      ? "text-red-400"
+                      : t.priority === "medium"
+                      ? "text-yellow-400"
+                      : "text-green-400"
+                  }`}
+                >
+                  🔥 {t.priority?.toUpperCase()}
+                </p>
               </div>
-              <div className="flex gap-2">
+
+              <div className="flex gap-4">
                 <button
                   onClick={() => toggleTask(t.id, t.completed)}
-                  className={`w-8 h-8 rounded-full border flex items-center justify-center transition ${
-                    t.completed ? "bg-green-500 border-green-500 text-white" : "border-gray-400 text-gray-400 hover:border-green-500 hover:text-green-500"
-                  }`}
+                  className="text-green-400"
                 >
                   ✓
                 </button>
+
                 <button
                   onClick={() => deleteTask(t.id, t)}
-                  className="w-8 h-8 rounded-full border border-gray-400 text-gray-400 hover:border-red-500 hover:text-red-500 flex items-center justify-center transition"
+                  className="text-red-400"
                 >
                   🗑
                 </button>
