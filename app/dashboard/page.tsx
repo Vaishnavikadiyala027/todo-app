@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 
-// ✅ Keep charts client-side only
+// ✅ Logic Fix: Keep charts client-side only
 const PieChart = dynamic(() => import("recharts").then(m => m.PieChart), { ssr: false });
 const Pie = dynamic(() => import("recharts").then(m => m.Pie), { ssr: false });
 const Cell = dynamic(() => import("recharts").then(m => m.Cell), { ssr: false });
@@ -82,13 +82,11 @@ export default function Dashboard() {
   const completed = tasks.filter((t) => t.completed).length;
   const pending = total - completed;
 
-  // ✅ PIE DATA WITH SPECIFIC COLORS
   const pieData = [
-    { name: "Completed", value: completed, color: "#22c55e" }, // Green
-    { name: "Pending", value: pending, color: "#ef4444" },    // Red
+    { name: "Completed", value: completed, color: "#22c55e" },
+    { name: "Pending", value: pending, color: "#ef4444" }, 
   ];
 
-  // ✅ WEEKLY LOGIC
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const weeklyData = days.map((day, index) => {
     const count = tasks.filter((t) => {
@@ -138,14 +136,13 @@ export default function Dashboard() {
 
       {total !== 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-          {/* STATUS PIE CHART */}
           <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow border border-white/20">
             <h3 className="mb-4 font-semibold">Status</h3>
             <div style={{ width: '100%', height: 300 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    key={`pie-${completed}-${pending}`} // ✅ RE-RENDERS WHEN DATA UPDATES
+                    key={`pie-${completed}-${pending}`} 
                     data={pieData}
                     cx="50%"
                     cy="50%"
@@ -156,11 +153,7 @@ export default function Dashboard() {
                     label={({ name, value }) => `${name}: ${value}`}
                   >
                     {pieData.map((entry, index) => (
-                      <Cell 
-                         key={`cell-${index}`} 
-                         fill={entry.color} 
-                         stroke="none"
-                      />
+                      <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -169,7 +162,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* WEEKLY BAR CHART */}
           <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow border border-white/20">
             <h3 className="mb-4 font-semibold">Weekly</h3>
             <div style={{ width: '100%', height: 300 }}>
