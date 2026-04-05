@@ -95,7 +95,7 @@ export default function Dashboard() {
                   dataKey="value"
                   cx="50%" cy="50%"
                   outerRadius={80}
-                  isAnimationActive={false} // ✅ Fix for gray color
+                  isAnimationActive={false}
                   label={({ name, value }) => `${name}: ${value}`}
                 >
                   {pieData.map((entry, index) => (
