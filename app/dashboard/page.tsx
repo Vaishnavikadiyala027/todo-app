@@ -82,19 +82,18 @@ export default function Dashboard() {
   const completed = tasks.filter((t) => t.completed).length;
   const pending = total - completed;
 
-  // ✅ FIXED: Explicit color data
+  // ✅ FIXED: Data colors defined explicitly
   const pieData = [
     { name: "Completed", value: completed, color: "#22c55e" },
     { name: "Pending", value: pending, color: "#f97316" },
   ];
 
-  // ✅ FIXED: Weekly Logic
+  // ✅ FIXED: Weekly Logic mapping
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const weeklyData = days.map((day, index) => {
     const count = tasks.filter((t) => {
       if (!t.date) return false;
       const taskDate = new Date(t.date);
-      // Check if task falls on this day of the week
       return taskDate.getDay() === index;
     }).length;
     return { day, tasks: count };
@@ -145,13 +144,14 @@ export default function Dashboard() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie 
+                    key={`pie-${tasks.length}`} // ✅ Forces re-render to apply colors
                     data={pieData} 
                     dataKey="value" 
                     nameKey="name" 
                     cx="50%" 
                     cy="50%" 
                     outerRadius={80} 
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, value }) => `${name}: ${value}`}
                   >
                     {pieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
