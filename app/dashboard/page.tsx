@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 
-// ✅ Logic Fix: Keep charts client-side only
+// ✅ Keep charts client-side only
 const PieChart = dynamic(() => import("recharts").then(m => m.PieChart), { ssr: false });
 const Pie = dynamic(() => import("recharts").then(m => m.Pie), { ssr: false });
 const Cell = dynamic(() => import("recharts").then(m => m.Cell), { ssr: false });
@@ -79,14 +79,19 @@ export default function Dashboard() {
   };
 
   const total = tasks.length;
-  const completed = tasks.filter((t) => t.completed).length;
-  const pending = total - completed;
+  const completedCount = tasks.filter((t) => t.completed).length;
+  const pendingCount = total - completedCount;
 
+  // ✅ FORCED COLOR DATA
   const pieData = [
-    { name: "Completed", value: completed, color: "#22c55e" },
-    { name: "Pending", value: pending, color: "#ef4444" }, 
+    { name: "Completed", value: completedCount },
+    { name: "Pending", value: pendingCount },
   ];
+  
+  // Directly mapping colors: Green for index 0, Red for index 1
+  const COLORS = ["#22c55e", "#ef4444"]; 
 
+  // ✅ WEEKLY LOGIC
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const weeklyData = days.map((day, index) => {
     const count = tasks.filter((t) => {
@@ -100,6 +105,7 @@ export default function Dashboard() {
   return (
     <div className={`min-h-screen p-10 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gradient-to-br from-purple-100 via-white to-orange-100 text-black'}`}>
       
+      {/* HEADER */}
       <div className="flex justify-between items-center mb-10">
         <h1 className="text-2xl font-bold text-orange-500">📊 Dashboard</h1>
         <div className="flex gap-6 items-center">
@@ -119,6 +125,7 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* TOP CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow border border-white/20">
           <p>Total Tasks</p>
@@ -126,23 +133,24 @@ export default function Dashboard() {
         </div>
         <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow border border-white/20">
           <p className="text-green-500 font-semibold">Completed</p>
-          <h2 className="text-2xl font-bold">{completed}</h2>
+          <h2 className="text-2xl font-bold">{completedCount}</h2>
         </div>
         <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow border border-white/20">
           <p className="text-red-500 font-semibold">Pending</p>
-          <h2 className="text-2xl font-bold">{pending}</h2>
+          <h2 className="text-2xl font-bold">{pendingCount}</h2>
         </div>
       </div>
 
       {total !== 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+          {/* STATUS PIE CHART */}
           <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow border border-white/20">
             <h3 className="mb-4 font-semibold">Status</h3>
             <div style={{ width: '100%', height: 300 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    key={`pie-${completed}-${pending}`} 
+                    key={`chart-${completedCount}-${pendingCount}`} // ✅ FORCES RE-DRAW ON CHANGE
                     data={pieData}
                     cx="50%"
                     cy="50%"
@@ -153,7 +161,11 @@ export default function Dashboard() {
                     label={({ name, value }) => `${name}: ${value}`}
                   >
                     {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={COLORS[index]} 
+                        strokeWidth={0}
+                      />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -162,6 +174,7 @@ export default function Dashboard() {
             </div>
           </div>
 
+          {/* WEEKLY BAR CHART */}
           <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow border border-white/20">
             <h3 className="mb-4 font-semibold">Weekly</h3>
             <div style={{ width: '100%', height: 300 }}>
