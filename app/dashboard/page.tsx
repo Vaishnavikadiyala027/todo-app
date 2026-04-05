@@ -1,21 +1,23 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamicImport from "next/dynamic";
 import { Moon, Sun } from "lucide-react";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-} from "recharts";
 
-// 🔥 FIREBASE
+// charts client-side only
+const PieChart = dynamicImport(() => import("recharts").then(m => m.PieChart), { ssr: false });
+const Pie = dynamicImport(() => import("recharts").then(m => m.Pie), { ssr: false });
+const Cell = dynamicImport(() => import("recharts").then(m => m.Cell), { ssr: false });
+const Tooltip = dynamicImport(() => import("recharts").then(m => m.Tooltip), { ssr: false });
+const ResponsiveContainer = dynamicImport(() => import("recharts").then(m => m.ResponsiveContainer), { ssr: false });
+const BarChart = dynamicImport(() => import("recharts").then(m => m.BarChart), { ssr: false });
+const Bar = dynamicImport(() => import("recharts").then(m => m.Bar), { ssr: false });
+const XAxis = dynamicImport(() => import("recharts").then(m => m.XAxis), { ssr: false });
+const YAxis = dynamicImport(() => import("recharts").then(m => m.YAxis), { ssr: false });
+const CartesianGrid = dynamicImport(() => import("recharts").then(m => m.CartesianGrid), { ssr: false });
+
+// FIREBASE
 import { db } from "../../firebase";
 import { collection, getDocs } from "firebase/firestore";
 
@@ -24,56 +26,81 @@ export default function Dashboard() {
 
   const [darkMode, setDarkMode] = useState(false);
   const [tasks, setTasks] = useState<any[]>([]);
+  const [user, setUser] = useState<any>(null);
+  const [mounted, setMounted] = useState(false);
 
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  // SAFE LOCALSTORAGE - Runs only in the browser
+  useEffect(() => {
+    setMounted(true);
 
-  // 🔥 FETCH FROM FIREBASE
-  const fetchTasks = async () => {
-    const snapshot = await getDocs(collection(db, "tasks"));
-    const data: any[] = [];
+    if (typeof window !== "undefined") {
+      try {
+        const userData = localStorage.getItem("user");
+        if (userData) setUser(JSON.parse(userData));
 
-    snapshot.forEach((doc) => {
-      const d = doc.data();
-      if (d.email === user.email) {
-        data.push({ id: doc.id, ...d });
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme === "dark") setDarkMode(true);
+      } catch (err) {
+        console.error("Error reading from localStorage:", err);
       }
-    });
+    }
+  }, []);
 
-    setTasks(data);
+  // FETCH TASKS
+  const fetchTasks = async (currentUser: any) => {
+    if (!currentUser) return;
+
+    try {
+      const snapshot = await getDocs(collection(db, "tasks"));
+      const data: any[] = [];
+
+      snapshot.forEach((doc) => {
+        const d = doc.data();
+        if (d.email === currentUser.email) {
+          data.push({ id: doc.id, ...d });
+        }
+      });
+
+      setTasks(data);
+    } catch (err) {
+      console.error("Error fetching tasks:", err);
+    }
   };
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    if (savedTheme === "dark") setDarkMode(true);
+    if (user) fetchTasks(user);
+  }, [user]);
 
-    fetchTasks();
-  }, []);
-
-  // 🔁 AUTO REFRESH (LIVE UPDATE)
   useEffect(() => {
-    const interval = setInterval(fetchTasks, 2000);
+    if (!user) return;
+
+    const interval = setInterval(() => {
+      fetchTasks(user);
+    }, 2000);
+
     return () => clearInterval(interval);
-  }, []);
+  }, [user]);
+
+  // Prevent rendering until mounted to avoid hydration mismatch
+  if (!mounted) return null;
 
   const toggleTheme = () => {
     const newMode = !darkMode;
     setDarkMode(newMode);
-    localStorage.setItem("theme", newMode ? "dark" : "light");
+    if (typeof window !== "undefined") {
+      localStorage.setItem("theme", newMode ? "dark" : "light");
+    }
   };
 
   const total = tasks.length;
   const completed = tasks.filter((t) => t.completed).length;
   const pending = total - completed;
 
-  // ✅ PIE DATA
   const pieData = [
     { name: "Completed", value: completed },
     { name: "Pending", value: pending },
   ];
 
-  const COLORS = ["#22c55e", "#f97316"];
-
-  // ✅ WEEKLY GRAPH (COMPLETED TASKS)
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   const weeklyData = days.map((day, index) => {
@@ -87,14 +114,8 @@ export default function Dashboard() {
   });
 
   return (
-    <div
-      className={`min-h-screen p-10 ${
-        darkMode
-          ? "bg-gradient-to-br from-[#0b1220] via-[#0f172a] to-[#1e293b] text-white"
-          : "bg-gradient-to-br from-purple-100 via-white to-orange-100 text-black"
-      }`}
-    >
-      {/* HEADER */}
+    <div className={`min-h-screen p-10 transition-colors ${darkMode ? 'bg-gray-900 text-white' : 'bg-gradient-to-br from-purple-100 via-white to-orange-100 text-black'}`}>
+
       <div className="flex justify-between items-center mb-10">
         <h1 className="text-3xl font-bold text-orange-500">
           📊 Dashboard Manager
@@ -102,48 +123,52 @@ export default function Dashboard() {
 
         <div className="flex gap-6 items-center">
           <button onClick={() => router.push("/todo")}>Home</button>
-          <button className="font-semibold">Dashboard</button>
+          <button className="font-semibold underline decoration-orange-500">Dashboard</button>
           <button onClick={() => router.push("/trash")}>Trash</button>
 
-          <button onClick={toggleTheme}>
+          <button onClick={toggleTheme} className="p-2 rounded-full bg-white/20">
             {darkMode ? <Sun size={18} /> : <Moon size={18} />}
           </button>
 
-          <span className="text-red-500 cursor-pointer">Logout</span>
+          <button 
+            onClick={() => {
+              localStorage.removeItem("user");
+              router.push("/");
+            }} 
+            className="text-red-500 cursor-pointer font-medium"
+          >
+            Logout
+          </button>
         </div>
       </div>
 
-      {/* STATS */}
-      <div className="grid grid-cols-3 gap-6 mb-10">
-        <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div className={`p-6 rounded-xl shadow ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
           <p>Total Tasks</p>
           <h2 className="text-2xl font-bold">{total}</h2>
         </div>
 
-        <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow">
-          <p className="text-green-400">Completed</p>
+        <div className={`p-6 rounded-xl shadow ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+          <p className="text-green-500">Completed</p>
           <h2 className="text-2xl font-bold">{completed}</h2>
         </div>
 
-        <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow">
-          <p className="text-orange-400">Pending</p>
+        <div className={`p-6 rounded-xl shadow ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+          <p className="text-orange-500">Pending</p>
           <h2 className="text-2xl font-bold">{pending}</h2>
         </div>
       </div>
 
-      {/* CHARTS */}
-      {total === 0 ? (
-        <p className="text-gray-400">No data available 📊</p>
-      ) : (
-        <div className="grid grid-cols-2 gap-10">
-          
-          {/* PIE */}
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
+      {total !== 0 ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+
+          <div className={`p-6 rounded-xl shadow ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <h3 className="mb-4 font-semibold">Completion Status</h3>
+            <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie data={pieData} dataKey="value" outerRadius={100} label>
-                  {pieData.map((entry, index) => (
-                    <Cell key={index} fill={COLORS[index]} />
+                  {pieData.map((_, i) => (
+                    <Cell key={i} fill={i === 0 ? "#22c55e" : "#f97316"} />
                   ))}
                 </Pie>
                 <Tooltip />
@@ -151,9 +176,9 @@ export default function Dashboard() {
             </ResponsiveContainer>
           </div>
 
-          {/* BAR */}
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className={`p-6 rounded-xl shadow ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <h3 className="mb-4 font-semibold">Weekly Progress</h3>
+            <ResponsiveContainer width="100%" height={300}>
               <BarChart data={weeklyData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="day" />
@@ -165,27 +190,11 @@ export default function Dashboard() {
           </div>
 
         </div>
+      ) : (
+        <div className="text-center mt-20 text-gray-500 italic">
+          No tasks found to generate charts.
+        </div>
       )}
-
-      {/* TASK LIST */}
-      <div className="space-y-4 mt-10">
-        {tasks.map((t) => (
-          <div
-            key={t.id}
-            className="p-4 rounded-xl bg-white/10 backdrop-blur shadow"
-          >
-            <p className={t.completed ? "line-through text-gray-400" : ""}>
-              {t.text}
-            </p>
-
-            {t.date && (
-              <p className="text-xs text-gray-400">
-                ⏰ {new Date(t.date).toLocaleString()}
-              </p>
-            )}
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
