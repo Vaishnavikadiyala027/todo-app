@@ -1,9 +1,9 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 
-// ✅ Prevent SSR for charts
 const PieChart = dynamic(() => import("recharts").then(m => m.PieChart), { ssr: false });
 const Pie = dynamic(() => import("recharts").then(m => m.Pie), { ssr: false });
 const Cell = dynamic(() => import("recharts").then(m => m.Cell), { ssr: false });
@@ -50,13 +50,13 @@ export default function Dashboard() {
 
   if (!mounted) return null;
 
+  const total = tasks.length;
   const completed = tasks.filter(t => t.completed).length;
-  const pending = tasks.length - completed;
+  const pending = total - completed;
 
-  // ✅ Hardcoded data for the Pie Chart
   const pieData = [
-    { name: "Completed", value: completed },
-    { name: "Pending", value: pending }
+    { name: "Completed", value: completed, color: "#22c55e" },
+    { name: "Pending", value: pending, color: "#ef4444" }
   ];
 
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -77,50 +77,57 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <div className="p-6 rounded-xl bg-white/20 backdrop-blur shadow">
-          <p>Total</p><h2 className="text-2xl font-bold">{tasks.length}</h2>
+        <div className="p-6 rounded-xl bg-white/20 backdrop-blur shadow border border-white/20">
+          <p>Total Tasks</p>
+          <h2 className="text-2xl font-bold">{total}</h2>
         </div>
-        <div className="p-6 rounded-xl bg-white/20 backdrop-blur shadow">
-          <p className="text-green-600">Completed</p><h2 className="text-2xl font-bold">{completed}</h2>
+        <div className="p-6 rounded-xl bg-white/20 backdrop-blur shadow border border-white/20">
+          <p className="text-green-500 font-semibold">Completed</p>
+          <h2 className="text-2xl font-bold">{completed}</h2>
         </div>
-        <div className="p-6 rounded-xl bg-white/20 backdrop-blur shadow">
-          <p className="text-red-600">Pending</p><h2 className="text-2xl font-bold">{pending}</h2>
+        <div className="p-6 rounded-xl bg-white/20 backdrop-blur shadow border border-white/20">
+          <p className="text-red-500 font-semibold">Pending</p>
+          <h2 className="text-2xl font-bold">{pending}</h2>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        <div className="p-6 rounded-xl bg-white/20 backdrop-blur shadow" style={{ minHeight: '350px' }}>
+        <div className="p-6 rounded-xl bg-white/20 backdrop-blur shadow border border-white/20">
           <h3 className="mb-4 font-semibold">Status</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                key={`pie-${completed}-${pending}`} // ✅ Forces refresh
-                data={pieData}
-                dataKey="value"
-                cx="50%" cy="50%"
-                outerRadius={80}
-                label={({ name, value }) => `${name}: ${value}`}
-              >
-                {/* ✅ DIRECT COLOR INJECTION */}
-                <Cell fill="#22c55e" stroke="none" /> 
-                <Cell fill="#ef4444" stroke="none" />
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+          <div style={{ width: '100%', height: 300 }}>
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie
+                  key={`pie-${completed}-${pending}`} 
+                  data={pieData}
+                  dataKey="value"
+                  cx="50%" cy="50%"
+                  outerRadius={80}
+                  label={({ name, value }) => `${name}: ${value}`}
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        <div className="p-6 rounded-xl bg-white/20 backdrop-blur shadow" style={{ minHeight: '350px' }}>
+        <div className="p-6 rounded-xl bg-white/20 backdrop-blur shadow border border-white/20">
           <h3 className="mb-4 font-semibold">Weekly</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={weeklyData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="day" />
-              <YAxis allowDecimals={false} />
-              <Tooltip />
-              <Bar dataKey="tasks" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <div style={{ width: '100%', height: 300 }}>
+            <ResponsiveContainer>
+              <BarChart data={weeklyData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="day" />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Bar dataKey="tasks" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
     </div>
