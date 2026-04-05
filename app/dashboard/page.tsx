@@ -6,7 +6,6 @@ import dynamic from "next/dynamic";
 // charts client-side only
 const PieChart = dynamic(() => import("recharts").then(m => m.PieChart), { ssr: false });
 const Pie = dynamic(() => import("recharts").then(m => m.Pie), { ssr: false });
-const Cell = dynamic(() => import("recharts").then(m => m.Cell), { ssr: false });
 const Tooltip = dynamic(() => import("recharts").then(m => m.Tooltip), { ssr: false });
 const ResponsiveContainer = dynamic(() => import("recharts").then(m => m.ResponsiveContainer), { ssr: false });
 const BarChart = dynamic(() => import("recharts").then(m => m.BarChart), { ssr: false });
@@ -48,18 +47,16 @@ export default function Dashboard() {
     if (user) fetchTasks(user);
   }, [user]);
 
-  // ✅ FIX: wait until mounted + data ready
   if (!mounted || tasks.length === 0) return null;
 
   const completed = tasks.filter(t => t.completed).length;
   const pending = tasks.length - completed;
 
-  const COLORS = ["#22c55e", "#ef4444"]; // green, red
+  const pieData = [
+    { name: "Completed", value: completed, fill: "#22c55e" },
+    { name: "Pending", value: pending, fill: "#ef4444" }
+  ];
 
- const pieData = [
-  { name: "Completed", value: completed, fill: "#22c55e" }, // green
-  { name: "Pending", value: pending, fill: "#ef4444" }     // red
-];
   const weeklyData = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((day, idx) => ({
     day,
     tasks: tasks.filter(t => t.date && new Date(t.date).getDay() === idx).length
@@ -102,15 +99,14 @@ export default function Dashboard() {
             <ResponsiveContainer>
               <PieChart>
                 <Pie
-  data={pieData}
-  dataKey="value"
-  cx="50%"
-  cy="50%"
-  outerRadius={90}
-  label
-  isAnimationActive={false}
->
-</pie>
+                  data={pieData}
+                  dataKey="value"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={90}
+                  label
+                  isAnimationActive={false}
+                />
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
