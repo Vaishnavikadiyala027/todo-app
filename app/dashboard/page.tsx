@@ -103,13 +103,18 @@ export default function Dashboard() {
             <ResponsiveContainer>
               <PieChart>
                 <Pie
-                  data={pieData}
-                  dataKey="value"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={90}
-                  label
-                >
+  data={pieData}
+  dataKey="value"
+  nameKey="name"   // ✅ ADD THIS LINE
+  cx="50%"
+  cy="50%"
+  outerRadius={90}
+  label
+>
+  {pieData.map((entry, index) => (
+    <Cell key={`cell-${index}`} fill={COLORS[index]} />
+  ))}
+</Pie>
                   {pieData.map((_, index) => (
                     <Cell key={index} fill={COLORS[index]} />
                   ))}
