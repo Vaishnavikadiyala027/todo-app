@@ -48,12 +48,12 @@ export default function Dashboard() {
     if (user) fetchTasks(user);
   }, [user]);
 
-  if (!mounted) return null;
+  // ✅ FIX: wait until mounted + data ready
+  if (!mounted || tasks.length === 0) return null;
 
   const completed = tasks.filter(t => t.completed).length;
   const pending = tasks.length - completed;
 
-  // ✅ FINAL COLOR FIX (IMPORTANT)
   const COLORS = ["#22c55e", "#ef4444"]; // green, red
 
   const pieData = [
