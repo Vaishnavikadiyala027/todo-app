@@ -3,16 +3,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 
+// ✅ Prevent SSR errors
 const PieChart = dynamic(() => import("recharts").then(m => m.PieChart), { ssr: false });
 const Pie = dynamic(() => import("recharts").then(m => m.Pie), { ssr: false });
 const Cell = dynamic(() => import("recharts").then(m => m.Cell), { ssr: false });
 const Tooltip = dynamic(() => import("recharts").then(m => m.Tooltip), { ssr: false });
 const ResponsiveContainer = dynamic(() => import("recharts").then(m => m.ResponsiveContainer), { ssr: false });
-const BarChart = dynamic(() => import("recharts").then(m => m.BarChart), { ssr: false });
-const Bar = dynamic(() => import("recharts").then(m => m.Bar), { ssr: false });
-const XAxis = dynamic(() => import("recharts").then(m => m.XAxis), { ssr: false });
-const YAxis = dynamic(() => import("recharts").then(m => m.YAxis), { ssr: false });
-const CartesianGrid = dynamic(() => import("recharts").then(m => m.CartesianGrid), { ssr: false });
 
 import { db } from "../../firebase";
 import { collection, getDocs } from "firebase/firestore";
@@ -33,12 +29,14 @@ export default function Dashboard() {
 
   const fetchTasks = async (currentUser: any) => {
     if (!currentUser) return;
-    const snapshot = await getDocs(collection(db, "tasks"));
-    const data: any[] = [];
-    snapshot.forEach((doc) => {
-      if (doc.data().email === currentUser.email) data.push({ id: doc.id, ...doc.data() });
-    });
-    setTasks(data);
+    try {
+      const snapshot = await getDocs(collection(db, "tasks"));
+      const data: any[] = [];
+      snapshot.forEach((doc) => {
+        if (doc.data().email === currentUser.email) data.push({ id: doc.id, ...doc.data() });
+      });
+      setTasks(data);
+    } catch (err) { console.error(err); }
   };
 
   useEffect(() => { if (user) fetchTasks(user); }, [user]);
@@ -48,40 +46,53 @@ export default function Dashboard() {
   const completed = tasks.filter(t => t.completed).length;
   const pending = tasks.length - completed;
 
+  // ✅ Data for the chart
+  const pieData = [
+    { name: "Completed", value: completed },
+    { name: "Pending", value: pending }
+  ];
+
   return (
-    <div className="min-h-screen p-10 bg-gradient-to-br from-purple-100 via-white to-orange-100">
+    <div className="min-h-screen p-10 bg-gradient-to-br from-purple-100 via-white to-orange-100 text-black">
       <div className="flex justify-between items-center mb-10">
         <h1 className="text-2xl font-bold text-orange-500">📊 Dashboard</h1>
-        <div className="flex gap-4"><button onClick={() => router.push("/todo")}>Home</button></div>
+        <button onClick={() => router.push("/todo")} className="underline">Home</button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <div className="p-6 rounded-xl bg-white/40 backdrop-blur shadow">
-          <p className="text-green-600 font-semibold">Completed</p>
-          <h2 className="text-2xl font-bold">{completed}</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+        {/* PIE CHART CARD */}
+        <div className="p-6 rounded-xl bg-white/40 backdrop-blur shadow border border-white/20">
+          <h3 className="mb-4 font-semibold text-lg">Task Status</h3>
+          <div style={{ width: '100%', height: 300 }}>
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie
+                  key={`pie-${completed}-${pending}`} // ✅ FORCES COLOR UPDATE
+                  data={pieData}
+                  dataKey="value"
+                  cx="50%" cy="50%"
+                  outerRadius={80}
+                  label={({ name, value }) => `${name}: ${value}`}
+                >
+                  <Cell fill="#22c55e" stroke="none" /> {/* Green */}
+                  <Cell fill="#ef4444" stroke="none" /> {/* Red */}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-        <div className="p-6 rounded-xl bg-white/40 backdrop-blur shadow">
-          <p className="text-red-600 font-semibold">Pending</p>
-          <h2 className="text-2xl font-bold">{pending}</h2>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        <div className="p-6 rounded-xl bg-white/40 backdrop-blur shadow" style={{ height: 350 }}>
-          <h3 className="mb-4 font-semibold">Status</h3>
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                key={`pie-${completed}-${pending}`} // ✅ FORCES RE-RENDER
-                data={[{ name: "Done", value: completed }, { name: "Pending", value: pending }]}
-                dataKey="value" cx="50%" cy="50%" outerRadius={80}
-              >
-                <Cell fill="#22c55e" /> {/* Green */}
-                <Cell fill="#ef4444" /> {/* Red */}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+        {/* STATS CARD */}
+        <div className="flex flex-col gap-6">
+          <div className="p-6 rounded-xl bg-white/40 backdrop-blur shadow border border-white/20">
+            <p className="text-green-600 font-bold">Completed Tasks</p>
+            <h2 className="text-3xl font-bold">{completed}</h2>
+          </div>
+          <div className="p-6 rounded-xl bg-white/40 backdrop-blur shadow border border-white/20">
+            <p className="text-red-600 font-bold">Pending Tasks</p>
+            <h2 className="text-3xl font-bold">{pending}</h2>
+          </div>
         </div>
       </div>
     </div>
