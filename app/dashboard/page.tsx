@@ -20,39 +20,34 @@ import { collection, getDocs } from "firebase/firestore";
 
 export default function Dashboard() {
   const router = useRouter();
-  const [darkMode, setDarkMode] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [tasks, setTasks] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     if (typeof window !== "undefined") {
       const userData = localStorage.getItem("user");
       if (userData) setUser(JSON.parse(userData));
-      if (localStorage.getItem("theme") === "dark") setDarkMode(true);
     }
   }, []);
 
   const fetchTasks = async (currentUser: any) => {
     if (!currentUser) return;
-    try {
-      const snapshot = await getDocs(collection(db, "tasks"));
-      const data: any[] = [];
-      snapshot.forEach((doc) => {
-        if (doc.data().email === currentUser.email) data.push({ id: doc.id, ...doc.data() });
-      });
-      setTasks(data);
-    } catch (err) { console.error(err); }
+    const snapshot = await getDocs(collection(db, "tasks"));
+    const data: any[] = [];
+    snapshot.forEach((doc) => {
+      if (doc.data().email === currentUser.email) data.push({ id: doc.id, ...doc.data() });
+    });
+    setTasks(data);
   };
 
   useEffect(() => { if (user) fetchTasks(user); }, [user]);
 
   if (!mounted) return null;
 
-  const total = tasks.length;
   const completed = tasks.filter(t => t.completed).length;
-  const pending = total - completed;
+  const pending = tasks.length - completed;
 
   const pieData = [
     { name: "Completed", value: completed, color: "#22c55e" },
@@ -66,7 +61,7 @@ export default function Dashboard() {
   }));
 
   return (
-    <div className={`min-h-screen p-10 ${darkMode ? 'bg-gray-900 text-white' : 'bg-gradient-to-br from-purple-100 via-white to-orange-100'}`}>
+    <div className="min-h-screen p-10 bg-gradient-to-br from-purple-100 via-white to-orange-100">
       <div className="flex justify-between items-center mb-10">
         <h1 className="text-2xl font-bold text-orange-500">📊 Dashboard</h1>
         <div className="flex gap-4">
@@ -77,28 +72,28 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <div className="p-6 rounded-xl bg-white/20 backdrop-blur shadow border border-white/20">
+        <div className="p-6 rounded-xl bg-white/40 backdrop-blur shadow border border-white/20">
           <p>Total Tasks</p>
-          <h2 className="text-2xl font-bold">{total}</h2>
+          <h2 className="text-2xl font-bold">{tasks.length}</h2>
         </div>
-        <div className="p-6 rounded-xl bg-white/20 backdrop-blur shadow border border-white/20">
-          <p className="text-green-500 font-semibold">Completed</p>
+        <div className="p-6 rounded-xl bg-white/40 backdrop-blur shadow border border-white/20">
+          <p className="text-green-600 font-semibold">Completed</p>
           <h2 className="text-2xl font-bold">{completed}</h2>
         </div>
-        <div className="p-6 rounded-xl bg-white/20 backdrop-blur shadow border border-white/20">
-          <p className="text-red-500 font-semibold">Pending</p>
+        <div className="p-6 rounded-xl bg-white/40 backdrop-blur shadow border border-white/20">
+          <p className="text-red-600 font-semibold">Pending</p>
           <h2 className="text-2xl font-bold">{pending}</h2>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        <div className="p-6 rounded-xl bg-white/20 backdrop-blur shadow border border-white/20">
+        <div className="p-6 rounded-xl bg-white/40 backdrop-blur shadow border border-white/20">
           <h3 className="mb-4 font-semibold">Status</h3>
           <div style={{ width: '100%', height: 300 }}>
             <ResponsiveContainer>
               <PieChart>
                 <Pie
-                  key={`pie-${completed}-${pending}`} 
+                  key={`pie-${completed}-${pending}`} // ✅ RE-RENDERS TO FIX COLORS
                   data={pieData}
                   dataKey="value"
                   cx="50%" cy="50%"
@@ -115,7 +110,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="p-6 rounded-xl bg-white/20 backdrop-blur shadow border border-white/20">
+        <div className="p-6 rounded-xl bg-white/40 backdrop-blur shadow border border-white/20">
           <h3 className="mb-4 font-semibold">Weekly</h3>
           <div style={{ width: '100%', height: 300 }}>
             <ResponsiveContainer>
