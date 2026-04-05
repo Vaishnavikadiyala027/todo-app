@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Moon, Sun } from "lucide-react";
 
-// ✅ FIX 1: ADD FIREBASE IMPORT
+// 🔥 FIREBASE
 import { db } from "../../firebase";
 
 import {
@@ -21,24 +21,33 @@ export default function Trash() {
   const [darkMode, setDarkMode] = useState(false);
   const [trash, setTrash] = useState<any[]>([]);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false); // ✅ Fix: Prevents hydration errors on Vercel
 
-  // ✅ LOAD USER
+  // ✅ COMBINED & FIXED LOCALSTORAGE ACCESS
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    setMounted(true); // Signal that we are in the browser
+    
+    if (typeof window === "undefined") return;
 
-    if (!user?.email) {
-      router.push("/"); // redirect if not logged in
-      return;
+    try {
+      // Get User
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      if (!user?.email) {
+        router.push("/");
+        return;
+      }
+      setUserEmail(user.email);
+
+      // Get Theme
+      const savedTheme = localStorage.getItem("theme");
+      if (savedTheme === "dark") setDarkMode(true);
+    } catch (err) {
+      console.error("Storage error:", err);
     }
-
-    setUserEmail(user.email);
   }, [router]);
 
   // ✅ REALTIME DATA
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    if (savedTheme === "dark") setDarkMode(true);
-
     if (!userEmail) return;
 
     const q = query(
@@ -48,18 +57,15 @@ export default function Trash() {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data: any[] = [];
-
       snapshot.forEach((d) => {
         data.push({ id: d.id, ...d.data() });
       });
-
       setTrash(data);
     });
 
     return () => unsubscribe();
   }, [userEmail]);
 
-  // ✅ DELETE FOREVER (SINGLE DELETE - FIXED)
   const deleteForever = async (id: string) => {
     try {
       await deleteDoc(doc(db, "trash", id));
@@ -68,10 +74,8 @@ export default function Trash() {
     }
   };
 
-  // ✅ RESTORE TASK (FIXED)
   const restoreTask = async (task: any) => {
     try {
-      // add back to tasks
       await addDoc(collection(db, "tasks"), {
         text: task.text,
         completed: task.completed || false,
@@ -81,25 +85,29 @@ export default function Trash() {
         createdAt: new Date(),
       });
 
-      // delete from trash
       await deleteDoc(doc(db, "trash", task.id));
     } catch (err) {
       console.error(err);
     }
   };
 
-  // ✅ LOGOUT (FIXED)
   const handleLogout = () => {
-    localStorage.removeItem("user");
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("user");
+    }
     router.push("/");
   };
 
-  // 🌙 THEME
   const toggleTheme = () => {
     const newMode = !darkMode;
     setDarkMode(newMode);
-    localStorage.setItem("theme", newMode ? "dark" : "light");
+    if (typeof window !== "undefined") {
+      localStorage.setItem("theme", newMode ? "dark" : "light");
+    }
   };
+
+  // ✅ Fix: Don't render UI until the browser is ready
+  if (!mounted) return null;
 
   return (
     <div
@@ -120,13 +128,12 @@ export default function Trash() {
           <button onClick={() => router.push("/dashboard")}>
             Dashboard
           </button>
-          <button className="font-semibold">Trash</button>
+          <button className="font-semibold underline decoration-red-500">Trash</button>
 
           <button onClick={toggleTheme}>
             {darkMode ? <Sun size={18} /> : <Moon size={18} />}
           </button>
 
-          {/* ✅ FIXED LOGOUT */}
           <span
             onClick={handleLogout}
             className="text-red-500 cursor-pointer"
@@ -138,39 +145,39 @@ export default function Trash() {
 
       {/* STATS */}
       <div className="grid grid-cols-3 gap-6 mb-10">
-        <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow">
-          <p>Deleted Tasks</p>
+        <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow border border-white/5">
+          <p className="opacity-70">Deleted Tasks</p>
           <h2 className="text-2xl font-bold text-red-500">
             {trash.length}
           </h2>
         </div>
 
-        <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow">
+        <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow border border-white/5">
           <p className="text-green-400">Recoverable</p>
           <h2 className="text-2xl font-bold">{trash.length}</h2>
         </div>
 
-        <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow">
-          <p>Permanent Deletes</p>
+        <div className="p-6 rounded-xl bg-white/10 backdrop-blur shadow border border-white/5">
+          <p className="opacity-70">Permanent Deletes</p>
           <h2 className="text-2xl font-bold">Manual</h2>
         </div>
       </div>
 
       {/* LIST */}
       {trash.length === 0 ? (
-        <p className="text-gray-400">No deleted tasks 🗑</p>
+        <p className="text-gray-400 italic">No deleted tasks 🗑</p>
       ) : (
         <div className="space-y-4">
           {trash.map((t) => (
             <div
               key={t.id}
-              className="p-4 rounded-xl bg-white/10 backdrop-blur shadow flex justify-between items-center"
+              className="p-4 rounded-xl bg-white/10 backdrop-blur shadow border border-white/5 flex justify-between items-center"
             >
               <div>
-                <p>{t.text}</p>
+                <p className="font-medium">{t.text}</p>
 
                 {t.date && (
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-400 mt-1">
                     ⏰ {new Date(t.date).toLocaleString()}
                   </p>
                 )}
@@ -179,14 +186,14 @@ export default function Trash() {
               <div className="flex gap-4">
                 <button
                   onClick={() => restoreTask(t)}
-                  className="text-green-400"
+                  className="text-green-400 hover:underline"
                 >
                   Restore
                 </button>
 
                 <button
                   onClick={() => deleteForever(t.id)}
-                  className="text-red-400"
+                  className="text-red-400 hover:underline"
                 >
                   Delete Forever
                 </button>
